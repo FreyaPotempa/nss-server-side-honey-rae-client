@@ -1,74 +1,99 @@
-import { useEffect, useState } from "react"
-import { useNavigate, useParams } from "react-router-dom"
-import { isStaff } from "../../utils/isStaff"
-import { getAllEmployees } from "../../managers/EmployeeManager"
-import { getTicketById, deleteTicket, updateTicket } from "../../managers/TicketManager"
+import { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { isStaff } from "../../utils/isStaff";
+import { getAllEmployees } from "../../managers/EmployeeManager";
+import {
+  getTicketById,
+  deleteTicket,
+  updateTicket,
+} from "../../managers/TicketManager";
 
 export const Ticket = () => {
-  const [ticket, setTicket] = useState({})
-  const [employees, setEmployees] = useState([])
-  const { ticketId } = useParams()
-  const navigate = useNavigate()
+  const [ticket, setTicket] = useState({});
+  const [employees, setEmployees] = useState([]);
+  const { ticketId } = useParams();
+  const navigate = useNavigate();
 
   const fetchTicket = () => {
-    getTicketById(ticketId)
-      .then((res) => setTicket(res))
-  }
+    getTicketById(ticketId).then((res) => setTicket(res));
+  };
 
-  useEffect(
-    () => {
-      fetchTicket()
-    },
-    [ticketId]
-  )
+  useEffect(() => {
+    fetchTicket();
+  }, [ticketId]);
 
-  useEffect(
-    () => {
-      getAllEmployees().then((res) => setEmployees(res))
-    }, []
-  )
+  useEffect(() => {
+    getAllEmployees().then((res) => setEmployees(res));
+  }, []);
 
   const deleteTicketEvent = () => {
-    deleteTicket(ticketId).then(() => navigate("/"))
-  }
+    deleteTicket(ticketId).then(() => navigate("/"));
+  };
 
   const updateTicketEvent = (evt) => {
     const updatedTicket = {
       ...ticket,
-      employee: parseInt(evt.target.value)
-    }
+      employee: parseInt(evt.target.value),
+    };
 
-    updateTicket(updatedTicket).then(() => fetchTicket())
-  }
+    updateTicket(updatedTicket).then(() => fetchTicket());
+  };
 
   const ticketStatus = () => {
     if (ticket.date_completed === null) {
       if (ticket.employee) {
-        return <span className="status--in-progress">In progress</span>
+        return (
+          <>
+            <span className="status--in-progress">In progress</span>
+            <button type="button" onClick={closeTicket}>
+              Mark Complete
+            </button>
+          </>
+        );
       }
-      return <span className="status--new">Unclaimed</span>
+      return <span className="status--new">Unclaimed</span>;
     }
-    return <span className="status--completed">Done</span>
-  }
+    return <span className="status--completed">Done</span>;
+  };
+
+  const closeTicket = () => {
+    // close ticket by making a PUT request adding date_completed to the ticket.
+    const ticketToClose = {
+      ...ticket,
+      employee: parseInt(ticket.employee.id),
+      date_completed: new Date().toISOString().slice(0, 10),
+    };
+
+    console.log(ticketToClose);
+
+    updateTicket(ticketToClose).then(() => {
+      fetchTicket();
+    });
+  };
 
   const employeePicker = () => {
     if (isStaff()) {
-      return <div className="ticket__employee">
-        <label>Assign to:</label>
-        <select
-          value={ticket.employee?.id}
-          onChange={updateTicketEvent}>
-          <option value="0">Choose...</option>
-          {
-            employees.map(e => <option key={`employee--${e.id}`} value={e.id}>{e.full_name}</option>)
-          }
-        </select>
-      </div>
+      return (
+        <div className="ticket__employee">
+          <label>Assign to:</label>
+          <select value={ticket.employee?.id} onChange={updateTicketEvent}>
+            <option value="0">Choose...</option>
+            {employees.map((e) => (
+              <option key={`employee--${e.id}`} value={e.id}>
+                {e.full_name}
+              </option>
+            ))}
+          </select>
+        </div>
+      );
+    } else {
+      return (
+        <div className="ticket__employee">
+          Assigned to {ticket.employee?.full_name ?? "no one"}
+        </div>
+      );
     }
-    else {
-      return <div className="ticket__employee">Assigned to {ticket.employee?.full_name ?? "no one"}</div>
-    }
-  }
+  };
 
   return (
     <>
@@ -77,25 +102,22 @@ export const Ticket = () => {
         <div>{ticket.description}</div>
 
         <footer className="ticket__footer ticket__footer--detail">
-          <div className=" footerItem">Submitted by {ticket.customer?.full_name}</div>
+          <div className=" footerItem">
+            Submitted by {ticket.customer?.full_name}
+          </div>
           <div className="ticket__employee footerItem">
-            {
-              ticket.date_completed === null
-                ? employeePicker()
-                : `Completed by ${ticket.employee?.full_name} on ${ticket.date_completed}`
-            }
+            {ticket.date_completed === null
+              ? employeePicker()
+              : `Completed by ${ticket.employee?.full_name} on ${ticket.date_completed}`}
           </div>
-          <div className="footerItem">
-            {ticketStatus()}
-          </div>
-          {
-            isStaff()
-              ? <></>
-              : <button onClick={deleteTicketEvent}>Delete</button>
-          }
+          <div className="footerItem">{ticketStatus()}</div>
+          {isStaff() ? (
+            <></>
+          ) : (
+            <button onClick={() => deleteTicketEvent()}>Delete</button>
+          )}
         </footer>
-
       </section>
     </>
-  )
-}
+  );
+};
